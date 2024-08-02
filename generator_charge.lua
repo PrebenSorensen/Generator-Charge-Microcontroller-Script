@@ -3,8 +3,8 @@ local on_signal = false
 local battery_level = 0
 local clutch_engagement = 0
 local tick_counter = 0
-local update_interval_ticks = 7.5 * 60 -- Convert 7.5 seconds to ticks (assuming 60 ticks per second)
-local engagement_step = 0.25
+local update_interval_ticks = 5 * 60 -- Convert 5 seconds to ticks (assuming 60 ticks per second)
+local engagement_step = 0.1
 local increasing = false
 local decreasing = false
 
@@ -19,16 +19,29 @@ function onTick()
         increasing = false
         decreasing = false
     else
-        -- Check if enough time has passed to adjust the clutch engagement
-        if tick_counter >= update_interval_ticks then
-            if battery_level < 0.9 then
-                increasing = true
-                decreasing = false
-            elseif battery_level >= 1 then
-                decreasing = true
+        -- Immediate adjustment when conditions are met
+        if battery_level < 0.9 and not increasing and clutch_engagement < 1 then
+            increasing = true
+            decreasing = false
+            clutch_engagement = clutch_engagement + engagement_step
+            if clutch_engagement > 1 then
+                clutch_engagement = 1
                 increasing = false
             end
-            
+            tick_counter = 0
+        elseif battery_level >= 1 and not decreasing and clutch_engagement > 0 then
+            decreasing = true
+            increasing = false
+            clutch_engagement = clutch_engagement - engagement_step
+            if clutch_engagement < 0 then
+                clutch_engagement = 0
+                decreasing = false
+            end
+            tick_counter = 0
+        end
+        
+        -- Check if enough time has passed to adjust the clutch engagement further
+        if tick_counter >= update_interval_ticks then
             if increasing and clutch_engagement < 1 then
                 clutch_engagement = clutch_engagement + engagement_step
                 if clutch_engagement > 1 then
